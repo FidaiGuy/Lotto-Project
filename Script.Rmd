@@ -1,0 +1,90 @@
+---
+title: "Lotto EDA project"
+output: html_document
+---
+Loading Packages into R
+
+```{r}
+library(tidyverse)
+library(here)
+library(lubridate)
+```
+
+```{r}
+player <- read.csv("C://Users/samir/Documents/GitHub/Lotto Project/player.csv")
+transaction_type <- read.csv("C://Users/samir/Documents/GitHub/Lotto Project/transaction_type.csv")
+transaction <- read.csv("C://Users/samir/Documents/GitHub/Lotto Project/transaction.csv")
+transaction <- transaction %>% mutate(BOOKINGDATE = lubridate::as_date(BOOKINGDATE))
+```
+
+For The first few chunks I'm just going to generate some charts to get a feel of the Player Demographics
+
+
+The density plot below represents the distribution of the birth years. From the density plot we can get a feel of the distribution of age demographics
+```{r}
+player %>%
+  ggplot(aes(lubridate::year(birth_date), color = gender_cd)) +
+  geom_density() +
+  xlab("Birth Year") +
+  ggtitle("Density of Birth Years of Lotto Players")
+```
+
+
+In this chart I aim to identify the preferred platforms each generational cohort uses. 
+```{r}
+levels <- c("Lost", "Silent", "Baby Boomer", "Generation X", "Millenial", "Generation Z")
+
+player %>%
+  mutate(cohort = case_when(
+    year(birth_date) < 1928 ~ "Lost",
+    year(birth_date) %in% 1929:1945 ~ "Silent",
+    year(birth_date) %in% 1946:1964 ~ "Baby Boomer",
+    year(birth_date) %in% 1965:1980 ~ "Generation X",
+    year(birth_date) %in% 1981:1996 ~ "Millenial",
+    year(birth_date) >= 1997 ~ "Generation Z"
+  )) %>%
+  filter(!is.na(cohort)) %>%
+  ggplot(aes(factor(cohort, levels = levels), fill = device)) +
+    geom_bar(stat = "count") +
+    coord_flip() +
+    xlab("Generation Cohort") +
+    ggtitle("Breakdown By Cohort/Device Preference")
+
+
+```
+The two largest generational cohorts are Millennial and Generation X. Furthermore, although using the web platforms are dominant throughout the cohorts, the Millennial and Gen X cohorts do have frequent users of the applications. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The chart below aims to identify seasonal trends in when individuals want to purchase tickets
+```{r}
+trans_per_date <- transaction %>% 
+  left_join(transaction_type, by = character()) %>%
+  group_by(BOOKINGDATE) %>%
+  filter(!is.na(TICKETTYPE), TICKETTYPE != "", trx_category_cd == "stake") %>%
+  count(TICKETTYPE) %>%
+  summarise(n = sum(n))
+
+trans_per_date %>% ggplot(aes(x = BOOKINGDATE, y = n)) + geom_col() + geom_smooth() +
+  ggtitle("Lottery Transactions Per day")
+
+```
+From the chart, we can see that as the season transitions into the summertime, an increased number of tickets get sold. Perhaps an ad campaign can be launched in late April or Early May with the goal of increasing lotto ticket purchases. 
